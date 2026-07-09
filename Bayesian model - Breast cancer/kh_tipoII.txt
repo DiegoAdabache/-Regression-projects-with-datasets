@@ -1,0 +1,39 @@
+# Knorr-Held TIPO II: no estructurada (espacio) x estructurada RW1 (tiempo)
+# Cada estado tiene su propia caminata aleatoria temporal, independiente
+# entre estados (sin estructura espacial en la interaccion).
+model{
+#Verosimilitud
+for (s in 1:S) {
+  for (t in 1:T) {
+    y[s,t] ~ dpois(mu[s,t])
+    mu[s,t] <- E[s,t] * lambda[s,t]
+    log(lambda[s,t]) <- alpha + phi.c[s] + theta.c[s] + gamma.c[t] + delta.c[s,t]
+    yf[s,t] ~ dpois(mu[s,t])
+  }
+}
+#Espacial CAR propio
+phi[1:S] ~ dmnorm(zero[1:S], Q.phi[1:S,1:S])
+for (i in 1:S) { for (j in 1:S) {
+  Q.phi[i,j] <- tau.phi * ( equals(i,j)*(num[i]+0.001) - rho*W[i,j] ) } }
+for (s in 1:S) { phi.c[s] <- phi[s] - mean(phi[]) }
+for (s in 1:S) { theta[s] ~ dnorm(0, tau.theta) }
+for (s in 1:S) {theta.c[s] <- theta[s] - mean(theta[]}
+
+#Temporal RW1
+gamma[1] ~ dnorm(0, 0.01)
+for (t in 2:T) { gamma[t] ~ dnorm(gamma[t-1], tau.gamma) }
+for (t in 1:T) { gamma.c[t] <- gamma[t] - mean(gamma[]) }
+#Interaccion TIPO II: RW1 en el tiempo, independiente por estado
+for (s in 1:S) {
+  delta[s,1] ~ dnorm(0, tau.delta)
+  for (t in 2:T) { delta[s,t] ~ dnorm(delta[s,t-1], tau.delta) }
+}
+for (s in 1:S) { for (t in 1:T) {
+  delta.c[s,t] <- delta[s,t] - mean(delta[s, ]) } }
+#Previas
+alpha ~ dnorm(0, 0.01)
+tau.phi   ~ dgamma(1, 0.1)
+tau.theta ~ dgamma(1, 0.1)
+tau.gamma ~ dgamma(1, 0.1)
+tau.delta ~ dgamma(1, 0.1)
+rho       ~ dunif(0, 0.99)

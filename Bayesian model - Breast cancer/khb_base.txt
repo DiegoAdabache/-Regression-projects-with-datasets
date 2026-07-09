@@ -1,0 +1,25 @@
+model
+{
+#Verosimilitud
+for (s in 1:S) {
+  for (t in 1:T) {
+    y[s,t] ~ dpois(mu[s,t])
+    mu[s,t] <- E[s,t] * lambda[s,t]
+    log(lambda[s,t]) <- alpha + phi[s] + theta[s] + gamma.c[t]
+    yf[s,t] ~ dpois(mu[s,t])
+  }
+}
+#Espacial estructurado: ICAR exacto (GeoBUGS car.normal) -> Knorr-Held
+phi[1:S] ~ car.normal(adj[], weights[], num[], tau.phi)
+#Heterogeneidad no estructurada
+for (s in 1:S) { theta[s] ~ dnorm(0, tau.theta) }
+#Temporal: caminata aleatoria de orden 1, centrada
+gamma[1] ~ dnorm(0, 0.001)
+for (t in 2:T) { gamma[t] ~ dnorm(gamma[t-1], tau.gamma) }
+for (t in 1:T) { gamma.c[t] <- gamma[t] - mean(gamma[]) }
+#Previas
+alpha     ~ dnorm(0, 1.0E-6)
+tau.phi   ~ dgamma(0.1, 0.1)
+tau.theta ~ dgamma(0.001, 0.001)
+tau.gamma ~ dgamma(0.001, 0.001)
+}

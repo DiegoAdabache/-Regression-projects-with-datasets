@@ -1,0 +1,32 @@
+model
+{
+#Verosimilitud
+for (s in 1:S) {
+  for (t in 1:T) {
+    y[s,t] ~ dpois(mu[s,t])
+    mu[s,t] <- E[s,t] * lambda[s,t]
+    log(lambda[s,t]) <- alpha + phi[s] + theta[s] + gamma.c[t] + delta.c[s,t]
+    yf[s,t] ~ dpois(mu[s,t])
+  }
+}
+phi[1:S] ~ car.normal(adj[], weights[], num[], tau.phi)
+for (s in 1:S) { theta[s] ~ dnorm(0, tau.theta) }
+gamma[1] ~ dnorm(0, 0.001)
+for (t in 2:T) { gamma[t] ~ dnorm(gamma[t-1], tau.gamma) }
+for (t in 1:T) { gamma.c[t] <- gamma[t] - mean(gamma[]) }
+#Interaccion TIPO IV: Kronecker RW1(tiempo) x ICAR(espacio).
+#Innovaciones espacialmente estructuradas (ICAR) acumuladas como RW1 en t.
+for (t in 1:T) { d1[1:S,t] ~ car.normal(adj[], weights[], num[], tau.delta) }
+for (s in 1:S) {
+  delta[s,1] <- d1[s,1]
+  for (t in 2:T) { delta[s,t] <- delta[s,t-1] + d1[s,t] }
+}
+for (s in 1:S) { for (t in 1:T) {
+  delta.c[s,t] <- delta[s,t] - mean(delta[,t]) } }
+#Previas
+alpha     ~ dnorm(0, 1.0E-6)
+tau.phi   ~ dgamma(0.1, 0.1)
+tau.theta ~ dgamma(0.001, 0.001)
+tau.gamma ~ dgamma(0.001, 0.001)
+tau.delta ~ dgamma(0.1, 0.1)
+}

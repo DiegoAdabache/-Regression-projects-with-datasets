@@ -1,0 +1,40 @@
+# Knorr-Held TIPO IV: estructurada CAR (espacio) x estructurada RW1 (tiempo)
+# Interaccion totalmente acoplada: el patron espacial CAR evoluciona como
+# caminata aleatoria en el tiempo ("mapa que se mueve"). El mas realista
+# para enfermedades; el mas costoso y el que mas restricciones requiere.
+model{
+#Verosimilitud
+for (s in 1:S) {
+  for (t in 1:T) {
+    y[s,t] ~ dpois(mu[s,t])
+    mu[s,t] <- E[s,t] * lambda[s,t]
+    log(lambda[s,t]) <- alpha + phi.c[s] + theta.c[s] + gamma.c[t] + delta.c[s,t]
+    yf[s,t] ~ dpois(mu[s,t])
+  }
+}
+#Espacial CAR propio (efecto principal)
+phi[1:S] ~ dmnorm(zero[1:S], Q.phi[1:S,1:S])
+for (i in 1:S) { for (j in 1:S) {
+  Q.phi[i,j] <- tau.phi * ( equals(i,j)*(num[i]+0.001) - rho*W[i,j] ) } }
+for (s in 1:S) { phi.c[s] <- phi[s] - mean(phi[]) }
+for (s in 1:S) { theta[s] ~ dnorm(0, tau.theta) }
+for (s in 1:S) { theta.c[s] <- theta[s] - mean(theta[]) }
+#Temporal RW1
+gamma[1] ~ dnorm(0, 0.01)
+for (t in 2:T) { gamma[t] ~ dnorm(gamma[t-1], tau.gamma) }
+for (t in 1:T) { gamma.c[t] <- gamma[t] - mean(gamma[]) }
+#Interaccion TIPO IV: CAR en espacio + RW1 en tiempo (Kronecker R_s x R_t)
+for (i in 1:S) { for (j in 1:S) {
+  Q.delta[i,j] <- tau.delta * ( equals(i,j)*(num[i]+0.001) - rho*W[i,j] ) } }
+delta[1:S,1] ~ dmnorm(zero[1:S], Q.delta[1:S,1:S])
+for (t in 2:T) { delta[1:S,t] ~ dmnorm(delta[1:S,t-1], Q.delta[1:S,1:S]) }
+for (s in 1:S) { for (t in 1:T) {
+  delta.c[s,t] <- delta[s,t] - mean(delta[s,]) - mean(delta[,t]) + mean(delta[,]) } }
+#Previas
+alpha ~ dnorm(0, 0.01)
+tau.phi   ~ dgamma(1, 0.1)
+tau.theta ~ dgamma(1, 0.1)
+tau.gamma ~ dgamma(1, 0.1)
+tau.delta ~ dgamma(1, 0.1)
+rho       ~ dunif(0, 0.99)
+}

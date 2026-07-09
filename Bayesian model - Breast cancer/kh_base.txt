@@ -1,0 +1,37 @@
+# Knorr-Held - Modelo BASE (efectos principales, SIN interaccion)
+# Poisson + offset E; espacial BYM (CAR propio phi + heterogeneidad theta);
+# temporal RW1 (gamma). Centrado para identificabilidad (suma-cero implicita).
+model{
+#Verosimilitud
+for (s in 1:S) {
+  for (t in 1:T) {
+    y[s,t] ~ dpois(mu[s,t])
+    mu[s,t] <- E[s,t] * lambda[s,t]
+    log(lambda[s,t]) <- alpha + phi.c[s] + theta.c[s] + gamma.c[t]
+    yf[s,t] ~ dpois(mu[s,t])
+  }
+}
+#Efecto espacial estructurado: CAR propio (estilo Ej.12c, JAGS nativo)
+phi[1:S] ~ dmnorm(zero[1:S], Q.phi[1:S,1:S])
+for (i in 1:S) {
+  for (j in 1:S) {
+    Q.phi[i,j] <- tau.phi * ( equals(i,j)*(num[i]+0.001) - rho*W[i,j] )
+  }
+}
+for (s in 1:S) { phi.c[s] <- phi[s] - mean(phi[]) }
+#Heterogeneidad no estructurada
+for (s in 1:S) { theta[s] ~ dnorm(0, tau.theta) }
+for (s in 1:S) { theta.c[s] <- theta[s] - mean(theta[]) }
+
+#Tendencia temporal: caminata aleatoria de orden 1
+gamma[1] ~ dnorm(0, 0.01)
+for (t in 2:T) { gamma[t] ~ dnorm(gamma[t-1], tau.gamma) }
+for (t in 1:T) { gamma.c[t] <- gamma[t] - mean(gamma[]) }
+#Previas
+alpha ~ dnorm(0, 0.01)
+tau.phi   ~ dgamma(1, 0.1)
+tau.theta ~ dgamma(1, 0.1)
+tau.gamma ~ dgamma(1, 0.1)
+tau.delta ~ dgamma(1, 0.1)
+rho       ~ dunif(0, 0.99)
+}

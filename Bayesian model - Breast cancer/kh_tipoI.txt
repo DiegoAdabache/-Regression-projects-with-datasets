@@ -1,0 +1,35 @@
+# Knorr-Held TIPO I: interaccion no estructurada x no estructurada
+# delta[s,t] iid ~ N(0, tau.delta).  (espacio no estr. x tiempo no estr.)
+model{
+#Verosimilitud
+for (s in 1:S) {
+  for (t in 1:T) {
+    y[s,t] ~ dpois(mu[s,t])
+    mu[s,t] <- E[s,t] * lambda[s,t]
+    log(lambda[s,t]) <- alpha + phi.c[s] + theta.c[s] + gamma.c[t] + delta[s,t]
+    yf[s,t] ~ dpois(mu[s,t])
+  }
+}
+#Espacial CAR propio
+phi[1:S] ~ dmnorm(zero[1:S], Q.phi[1:S,1:S])
+for (i in 1:S) { for (j in 1:S) {
+  Q.phi[i,j] <- tau.phi * ( equals(i,j)*(num[i]+0.001) - rho*W[i,j] ) } }
+for (s in 1:S) { phi.c[s] <- phi[s] - mean(phi[]) }
+for (s in 1:S) { theta[s] ~ dnorm(0, tau.theta) }
+for (s in 1:S) { theta.c[s] <- theta[s] - mean(theta[]) }
+
+#Temporal RW1
+gamma[1] ~ dnorm(0, 0.01)
+for (t in 2:T) { gamma[t] ~ dnorm(gamma[t-1], tau.gamma) }
+for (t in 1:T) { gamma.c[t] <- gamma[t] - mean(gamma[]) }
+#Interaccion TIPO I: no estructurada en espacio y tiempo
+for (s in 1:S) { for (t in 1:T) { delta[s,t] ~ dnorm(0, tau.delta) } }
+
+#Previas
+alpha ~ dnorm(0, 0.01)
+tau.phi   ~ dgamma(1, 0.1)
+tau.theta ~ dgamma(1, 0.1)
+tau.gamma ~ dgamma(1, 0.1)
+tau.delta ~ dgamma(1, 0.1)
+rho       ~ dunif(0, 0.99)
+}

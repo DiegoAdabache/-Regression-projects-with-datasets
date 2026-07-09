@@ -1,0 +1,38 @@
+# Knorr-Held TIPO III: estructurada CAR (espacio) x no estructurada (tiempo)
+# Cada periodo tiene su propio patron espacial CAR, independiente entre
+# periodos (sin memoria temporal en la interaccion).
+model{
+#Verosimilitud
+for (s in 1:S) {
+  for (t in 1:T) {
+    y[s,t] ~ dpois(mu[s,t])
+    mu[s,t] <- E[s,t] * lambda[s,t]
+    log(lambda[s,t]) <- alpha + phi.c[s] + theta.c[s] + gamma.c[t] + delta.c[s,t]
+    yf[s,t] ~ dpois(mu[s,t])
+  }
+}
+#Espacial CAR propio (efecto principal)
+phi[1:S] ~ dmnorm(zero[1:S], Q.phi[1:S,1:S])
+for (i in 1:S) { for (j in 1:S) {
+  Q.phi[i,j] <- tau.phi * ( equals(i,j)*(num[i]+0.001) - rho*W[i,j] ) } }
+for (s in 1:S) { phi.c[s] <- phi[s] - mean(phi[]) }
+for (s in 1:S) { theta[s] ~ dnorm(0, tau.theta) }
+for (s in 1:S) { theta.c[s] <- theta[s] - mean(theta[]) }
+#Temporal RW1
+gamma[1] ~ dnorm(0, 0.01)
+for (t in 2:T) { gamma[t] ~ dnorm(gamma[t-1], tau.gamma) }
+for (t in 1:T) { gamma.c[t] <- gamma[t] - mean(gamma[]) }
+#Interaccion TIPO III: CAR espacial independiente en cada periodo
+for (i in 1:S) { for (j in 1:S) {
+  Q.delta[i,j] <- tau.delta * ( equals(i,j)*(num[i]+0.001) - rho*W[i,j] ) } }
+for (t in 1:T) { delta[1:S,t] ~ dmnorm(zero[1:S], Q.delta[1:S,1:S]) }
+for (s in 1:S) { for (t in 1:T) {
+  delta.c[s,t] <- delta[s,t] - mean(delta[,t]) } }
+#Previas
+alpha ~ dnorm(0, 0.01)
+tau.phi   ~ dgamma(1, 0.1)
+tau.theta ~ dgamma(1, 0.1)
+tau.gamma ~ dgamma(1, 0.1)
+tau.delta ~ dgamma(1, 0.1)
+rho       ~ dunif(0, 0.99)
+}
